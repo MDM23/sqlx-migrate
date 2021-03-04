@@ -6,7 +6,7 @@ use std::{convert::TryInto, env, fs, path::Path};
 use syn::LitStr;
 
 #[proc_macro]
-pub fn migrate(input: TokenStream) -> TokenStream {
+pub fn embed(input: TokenStream) -> TokenStream {
     let dir = syn::parse_macro_input!(input as LitStr);
     let path = Path::new(&env::var("CARGO_MANIFEST_DIR").unwrap()).join(&dir.value());
 
@@ -14,12 +14,16 @@ pub fn migrate(input: TokenStream) -> TokenStream {
 }
 
 fn parse_dir(path: &str) -> proc_macro2::TokenStream {
-    let migrations: Vec<Migration> = read_dir(path)
+    let mut migrations: Vec<Migration> = read_dir(path)
         .unwrap()
         .map(|e| e.unwrap().try_into().unwrap())
         .collect();
 
+    migrations.sort_by_key(|m| m.version);
+
     quote! {
-        vec![ #(#migrations),* ]
+        sqlx_migrate::Migrator::new(
+            vec![ #(#migrations),* ]
+        )
     }
 }

@@ -28,7 +28,7 @@ pub enum MigrationError {
 
 #[derive(Debug)]
 pub struct Migration {
-    pub checksum: Vec<u8>,
+    pub checksum: String,
     pub name: String,
     pub sql: String,
     pub version: i64,
@@ -58,7 +58,7 @@ impl TryFrom<DirEntry> for Migration {
             .parse()?;
 
         let sql = fs::read_to_string(&entry.path())?;
-        let checksum = Vec::from(Sha256::digest(sql.as_bytes()).as_slice());
+        let checksum = format!("{:x}", Sha256::digest(sql.as_bytes()));
 
         Ok(Self {
             checksum,
@@ -80,7 +80,7 @@ impl ToTokens for Migration {
 
         let ts = quote! {
             sqlx_migrate::Migration {
-                checksum: vec![ #(#checksum),* ],
+                checksum: String::from(#checksum),
                 name: String::from(#name),
                 sql: String::from(#sql),
                 version: #version,
@@ -88,5 +88,15 @@ impl ToTokens for Migration {
         };
 
         tokens.append_all(ts.into_iter());
+    }
+}
+
+pub struct Migrator {
+    pub migrations: Vec<Migration>,
+}
+
+impl Migrator {
+    pub fn new(migrations: Vec<Migration>) -> Self {
+        Migrator { migrations }
     }
 }

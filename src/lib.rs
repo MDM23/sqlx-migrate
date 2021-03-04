@@ -1,2 +1,2 @@
-pub use common::{Migration, MigrationError};
-pub use macros::migrate;
+pub use common::{Migration, MigrationError, Migrator};
+pub use macros::embed;
