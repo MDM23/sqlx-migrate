@@ -1,0 +1,9 @@
+[package]
+name = "sqlx-migrate"
+version = "0.1.0"
+authors = ["Peter Frank <mdm23@gmx.de>"]
+edition = "2018"
+
+[dependencies]
+common = { path = "common" }
+macros = { path = "macros" }

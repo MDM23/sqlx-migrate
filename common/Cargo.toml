@@ -1,0 +1,13 @@
+[package]
+name = "common"
+version = "0.1.0"
+authors = ["Peter Frank <mdm23@gmx.de>"]
+edition = "2018"
+
+[dependencies]
+lazy_static = "1.4.0"
+proc-macro2 = "1.0"
+quote = "1.0.9"
+regex = "1"
+sha2 = "0.9.3"
+thiserror = "1.0"
