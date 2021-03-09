@@ -1,7 +1,7 @@
-use common::Migration;
 use fs::read_dir;
 use proc_macro::TokenStream;
 use quote::quote;
+use sqlx_migrate_common::Migration;
 use std::{convert::TryInto, env, fs, path::Path};
 use syn::LitStr;
 

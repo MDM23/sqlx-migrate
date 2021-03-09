@@ -5,6 +5,10 @@ use quote::ToTokens;
 use quote::{quote, TokenStreamExt};
 use regex::Regex;
 use sha2::{Digest, Sha256};
+use sqlx::{
+    postgres::{PgPool, PgQueryResult, PgRow},
+    Executor, Row,
+};
 use std::convert::TryFrom;
 use std::fs;
 use thiserror::Error;
@@ -18,6 +22,12 @@ lazy_static! {
 pub enum MigrationError {
     #[error("Filename is invalid")]
     FilenameError,
+
+    #[error("Checksum of already applied migration does not match")]
+    ChecksumError,
+
+    #[error(transparent)]
+    SQLXError(#[from] sqlx::Error),
 
     #[error(transparent)]
     ParseIntError(#[from] std::num::ParseIntError),
@@ -91,6 +101,11 @@ impl ToTokens for Migration {
     }
 }
 
+struct AppliedMigration {
+    checksum: String,
+    version: i64,
+}
+
 pub struct Migrator {
     pub migrations: Vec<Migration>,
 }
@@ -98,5 +113,89 @@ pub struct Migrator {
 impl Migrator {
     pub fn new(migrations: Vec<Migration>) -> Self {
         Migrator { migrations }
+    }
+
+    pub async fn migrate(&self, db: &PgPool) -> Result<(), MigrationError> {
+        self.ensure_table(db).await?;
+
+        let current = self.get_applied_migrations(db).await?;
+
+        for migration in &self.migrations {
+            match current.iter().find(|a| a.version == migration.version) {
+                None => self.apply_migration(db, migration).await?,
+                Some(a) => {
+                    if a.checksum != migration.checksum {
+                        return Err(MigrationError::ChecksumError);
+                    }
+                }
+            };
+        }
+
+        Ok(())
+    }
+
+    async fn ensure_table(&self, db: &PgPool) -> Result<PgQueryResult, sqlx::Error> {
+        db.execute(
+            r#"
+                CREATE TABLE IF NOT EXISTS migrations (
+                    version     BIGINT PRIMARY KEY,
+                    name        TEXT NOT NULL,
+                    checksum    VARCHAR(64),
+                    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+                );
+            "#,
+        )
+        .await
+    }
+
+    async fn get_applied_migrations(
+        &self,
+        db: &PgPool,
+    ) -> Result<Vec<AppliedMigration>, sqlx::Error> {
+        let mut result: Vec<AppliedMigration> = vec![];
+
+        db.fetch_all(
+            r#"
+                SELECT version, checksum
+                FROM migrations
+                ORDER BY version
+            "#,
+        )
+        .await?
+        .iter()
+        .try_for_each(|row: &PgRow| -> Result<(), sqlx::Error> {
+            result.push(AppliedMigration {
+                checksum: row.try_get("checksum")?,
+                version: row.try_get("version")?,
+            });
+
+            Ok(())
+        })?;
+
+        Ok(result)
+    }
+
+    async fn apply_migration(&self, db: &PgPool, migration: &Migration) -> Result<(), sqlx::Error> {
+        let mut tx = db.begin().await?;
+
+        for stmt in migration.sql.split(";") {
+            if !stmt.trim().is_empty() {
+                tx.execute(sqlx::query(&stmt)).await?;
+            }
+        }
+
+        sqlx::query(
+            r#"
+                INSERT INTO migrations ( version, name, checksum )
+                VALUES ($1, $2, $3)
+            "#,
+        )
+        .bind(migration.version)
+        .bind(&*migration.name)
+        .bind(&*migration.checksum)
+        .execute(&mut tx)
+        .await?;
+
+        tx.commit().await
     }
 }

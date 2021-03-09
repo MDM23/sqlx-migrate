@@ -5,5 +5,5 @@ authors = ["Peter Frank <mdm23@gmx.de>"]
 edition = "2018"
 
 [dependencies]
-common = { path = "common" }
-macros = { path = "macros" }
+sqlx-migrate-common = { path = "common" }
+sqlx-migrate-macros = { path = "macros" }

@@ -1,8 +1,19 @@
 [package]
-name = "common"
-version = "0.1.0"
+name = "sqlx-migrate-common"
+version = "0.0.0"
 authors = ["Peter Frank <mdm23@gmx.de>"]
 edition = "2018"
+
+[features]
+default = [ "runtime-actix-rustls" ]
+
+runtime-actix-native-tls = [ "sqlx/runtime-actix-native-tls" ]
+runtime-async-std-native-tls = [ "sqlx/runtime-async-std-native-tls" ]
+runtime-tokio-native-tls = [ "sqlx/runtime-tokio-native-tls" ]
+
+runtime-actix-rustls = [ "sqlx/runtime-actix-rustls" ]
+runtime-async-std-rustls = [ "sqlx/runtime-async-std-rustls" ]
+runtime-tokio-rustls = [ "sqlx/runtime-tokio-rustls" ]
 
 [dependencies]
 lazy_static = "1.4.0"
@@ -11,3 +22,7 @@ quote = "1.0.9"
 regex = "1"
 sha2 = "0.9.3"
 thiserror = "1.0"
+
+[dependencies.sqlx]
+features = ["postgres"]
+version = "0.5.1"

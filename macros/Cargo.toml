@@ -1,5 +1,5 @@
 [package]
-name = "macros"
+name = "sqlx-migrate-macros"
 version = "0.0.0"
 authors = ["Peter Frank <mdm23@gmx.de>"]
 edition = "2018"
@@ -12,5 +12,5 @@ proc-macro2 = "1.0"
 quote = "1.0"
 syn = "1.0"
 
-[dependencies.common]
+[dependencies.sqlx-migrate-common]
 path = "../common"
